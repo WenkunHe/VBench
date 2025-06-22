@@ -73,11 +73,11 @@ def multiple_objects(model, video_dict, device):
     return success_rate, video_results
         
 
-def compute_multiple_objects(json_dir, device, submodules_dict, **kwargs):
+def compute_multiple_objects(json_list, device, submodules_dict, **kwargs):
     dense_caption_model = DenseCaptioning(device)
     dense_caption_model.initialize_model_det(**submodules_dict)
     logger.info("Initialize detection model success")
-    _, prompt_dict_ls = load_dimension_info(json_dir, dimension='multiple_objects', lang='en')
+    _, prompt_dict_ls = load_dimension_info(json_list, dimension='multiple_objects', lang='en')
     prompt_dict_ls = distribute_list_to_rank(prompt_dict_ls)
     all_results, video_results = multiple_objects(dense_caption_model, prompt_dict_ls, device)
     if get_world_size() > 1:

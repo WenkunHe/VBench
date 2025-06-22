@@ -69,11 +69,11 @@ def subject_consistency(model, video_list, device, read_frame):
     return sim_per_frame, video_results
 
 
-def compute_subject_consistency(json_dir, device, submodules_list, **kwargs):
+def compute_subject_consistency(json_list, device, submodules_list, **kwargs):
     dino_model = torch.hub.load(**submodules_list).to(device)
     read_frame = submodules_list['read_frame']
     logger.info("Initialize DINO success")
-    video_list, _ = load_dimension_info(json_dir, dimension='subject_consistency', lang='en')
+    video_list, _ = load_dimension_info(json_list, dimension='subject_consistency', lang='en')
     video_list = distribute_list_to_rank(video_list)
     all_results, video_results = subject_consistency(dino_model, video_list, device, read_frame)
     if get_world_size() > 1:

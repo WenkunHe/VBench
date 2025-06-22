@@ -56,14 +56,14 @@ def technical_quality(model, video_list, device, **kwargs):
     return average_score, video_results
 
 
-def compute_imaging_quality(json_dir, device, submodules_list, **kwargs):
+def compute_imaging_quality(json_list, device, submodules_list, **kwargs):
     model_path = submodules_list['model_path']
 
     model = MUSIQ(pretrained_model_path=model_path)
     model.to(device)
     model.training = False
     
-    video_list, _ = load_dimension_info(json_dir, dimension='imaging_quality', lang='en')
+    video_list, _ = load_dimension_info(json_list, dimension='imaging_quality', lang='en')
     video_list = distribute_list_to_rank(video_list)
     all_results, video_results = technical_quality(model, video_list, device, **kwargs)
     if get_world_size() > 1:

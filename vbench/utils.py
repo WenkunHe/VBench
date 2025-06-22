@@ -199,7 +199,7 @@ def read_frames_decord_by_fps(
     frames = frames.permute(0, 3, 1, 2)  # (T, C, H, W), torch.uint8
     return frames
     
-def load_dimension_info(json_dir, dimension, lang):
+def load_dimension_info(json_list, dimension, lang):
     """
     Load video list and prompt information based on a specified dimension and language from a JSON file.
     
@@ -221,7 +221,7 @@ def load_dimension_info(json_dir, dimension, lang):
     """
     video_list = []
     prompt_dict_ls = []
-    full_prompt_list = load_json(json_dir)
+    full_prompt_list = json_list
     for prompt_dict in full_prompt_list:
         if dimension in prompt_dict['dimension'] and 'video_list' in prompt_dict:
             prompt = prompt_dict[f'prompt_{lang}']

@@ -63,10 +63,10 @@ def overall_consistency(clip_model, video_dict, tokenizer, device, sample="middl
     avg_score = np.mean(sim)
     return avg_score, video_results
 
-def compute_overall_consistency(json_dir, device, submodules_list, **kwargs):
+def compute_overall_consistency(json_list, device, submodules_list, **kwargs):
     tokenizer = SimpleTokenizer(os.path.join(CACHE_DIR, "ViCLIP/bpe_simple_vocab_16e6.txt.gz"))
     viclip = ViCLIP(tokenizer= tokenizer, **submodules_list).to(device)
-    _, video_dict = load_dimension_info(json_dir, dimension='overall_consistency', lang='en')
+    _, video_dict = load_dimension_info(json_list, dimension='overall_consistency', lang='en')
     video_dict = distribute_list_to_rank(video_dict)
     all_results, video_results = overall_consistency(viclip, video_dict, tokenizer, device)
     if get_world_size() > 1:
