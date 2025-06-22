@@ -116,7 +116,6 @@ class VBench(object):
                     prompt_dict['video_list'] = []
                     for i in range(5): # video index for the same prompt
                         intended_video_name = f'{prompt}{special_str}-{str(i)}{postfix}'
-                        print(intended_video_name)
                         if intended_video_name in video_names: # if the video exists
                             intended_video_path = os.path.join(videos_path, intended_video_name)
                             prompt_dict['video_list'].append(intended_video_path)
@@ -136,12 +135,9 @@ class VBench(object):
         submodules_dict = init_submodules(dimension_list, local=local, read_frame=read_frame)
 
         cur_full_info_list = self.build_full_info_json(videos_path, name, dimension_list, prompt_list, mode=mode, **kwargs)
-        from efficientvit.apps.utils.dist import is_master
-        if is_master():
-            print(cur_full_info_list)
         
         for dimension in dimension_list:
-            dimension_module = importlib.import_module(f'efficientvit.videogencore.metrics_offline.vbench.{dimension}')
+            dimension_module = importlib.import_module(f'vbench.{dimension}')
             evaluate_func = getattr(dimension_module, f'compute_{dimension}')
             submodules_list = submodules_dict[dimension]
             results = evaluate_func(cur_full_info_list, self.device, submodules_list, **kwargs)
