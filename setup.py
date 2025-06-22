@@ -11,8 +11,8 @@ def check_torch_version():
 
         cuda_version = torch.version.cuda
         print(cuda_version)
-        if cuda_version not in ["11.6", "11.7", "11.8", "12.1"]:
-            raise RuntimeError(f"\033[91mUnsupported CUDA version: {cuda_version}. Please install PyTorch with 11.6<=CUDA<=12.1.\033[0m")
+        if cuda_version not in ["11.6", "11.7", "11.8", "12.1", "12.2", "12.4"]:
+            raise RuntimeError(f"\033[91mUnsupported CUDA version: {cuda_version}. Please install PyTorch with 11.6<=CUDA<=12.4.\033[0m")
     except:
         print("\033[93mPlease install torch and torchvision compiled with cuda 11.8 before installing vbench\033[0m")
         print("\033[93mFor CUDA 11.8, run:\033[0m")
