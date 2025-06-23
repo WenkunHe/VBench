@@ -207,14 +207,11 @@ class ComputeSingleMotionSmoothness(ComputeSingleMetric):
         ckpt = submodules_list["ckpt"]
         self.motion = MotionSmoothness(config, ckpt, device)
     
-    def update_single(self, images_numpy):
+    def update_single(self, images_tensor):
         motion = self.motion
         device = self.device
 
-        def img2tensor(img):
-            return torch.tensor(img).permute(2, 0, 1).unsqueeze(0) / 255.0
-
-        images = [frame for frame in images_numpy]
+        images = [frame for frame in images_tensor]
 
         score_per_video = motion.motion_score(images)
         self.score += score_per_video

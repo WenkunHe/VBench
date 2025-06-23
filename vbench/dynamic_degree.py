@@ -61,14 +61,18 @@ class DynamicDegree:
         self.params = {"thres":6.0*(scale/256.0), "count_num":round(4*(count/16.0))}
 
 
-    def infer(self, video_path):
+    def infer(self, item):
         with torch.no_grad():
-            if video_path.endswith('.mp4'):
-                frames = self.get_frames(video_path)
-            elif os.path.isdir(video_path):
-                frames = self.get_frames_from_img_folder(video_path)
+            if isinstance(item, str):
+                if video_path.endswith('.mp4'):
+                    frames = self.get_frames(video_path)
+                elif os.path.isdir(video_path):
+                    frames = self.get_frames_from_img_folder(video_path)
+                else:
+                    raise NotImplementedError
             else:
-                raise NotImplementedError
+                frames = item
+
             self.set_params(frame=frames[0], count=len(frames))
             static_score = []
             for image1, image2 in zip(frames[:-1], frames[1:]):
@@ -162,3 +166,25 @@ def compute_dynamic_degree(json_list, device, submodules_list, **kwargs):
         video_results = gather_list_of_dict(video_results)
         all_results = sum([d['video_results'] for d in video_results]) / len(video_results)
     return all_results, video_results
+
+
+from .utils import ComputeSingleMetric
+
+class ComputeSingleDynamicDegree(ComputeSingleMetric):
+    def __init__(self, device, submodules_list):
+        super().__init__(device, submodules_list)
+        model_path = submodules_list["model"] 
+        args_new = edict({
+            "model": model_path,
+            "small": False,
+            "mixed_precision": False,
+            "alternate_corr": False
+        })
+        self.dynamic = DynamicDegree(args_new, device)
+    
+    def update_single(self, images_tensor):
+        dynamic = self.dynamic
+        frames = [frame.permute(1, 2, 0).numpy() for frame in images_tensor]
+        score_per_video = dynamic.infer(frames)
+        self.score += score_per_video
+        self.n_samples += 1

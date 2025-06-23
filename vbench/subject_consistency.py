@@ -90,12 +90,12 @@ class ComputeSingleSubjectConsistency(ComputeSingleMetric):
         self.model = torch.hub.load(**submodules_list).to(device)
         self.image_transform = dino_transform(224)
     
-    def update_single(self, images_numpy):
+    def update_single(self, images_tensor):
         model = self.model
         image_transform = self.image_transform
         device = self.device
 
-        images = image_transform(images_numpy)
+        images = image_transform(images_tensor)
         video_sim = 0.0
 
         for i in range(len(images)):
