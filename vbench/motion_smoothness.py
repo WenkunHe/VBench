@@ -153,6 +153,9 @@ class MotionSmoothness:
         # -----------------------  cal_vfi_score ----------------------- 
         outputs = padder.unpad(*outputs)
         outputs = [tensor2img(out) for out in outputs]
+        for frame in frames:
+            print(frame.shape)
+        print(frames[0])
         vfi_score = self.vfi_score(frames, outputs)
         norm = (255.0 - vfi_score)/255.0
         return norm
