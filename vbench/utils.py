@@ -404,6 +404,9 @@ def load_json(path):
 def list_sum(x: list) -> Any:
     return x[0] if len(x) == 1 else x[0] + list_sum(x[1:])
 
+def get_dist_size() -> int:
+    return int(os.environ["WORLD_SIZE"])
+
 def sync_tensor(tensor: torch.Tensor | float) -> torch.Tensor | list[torch.Tensor]:
     if not torch.distributed.is_initialized():
         return tensor
