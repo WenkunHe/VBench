@@ -45,6 +45,8 @@ def subject_consistency(model, video_list, device, read_frame):
                 images.append(image_transform(Image.open(tmp_path)))
         else:
             images = load_video(video_path)
+            for image in images:
+                print(image)
             images = image_transform(images)
         for i in range(len(images)):
             with torch.no_grad():
