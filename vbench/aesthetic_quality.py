@@ -137,5 +137,5 @@ class ComputeSingleAestheticQuality(ComputeSingleMetric):
         normalized_aesthetic_scores = aesthetic_scores / 10
         cur_avg = torch.mean(normalized_aesthetic_scores, dim=0, keepdim=True)
 
-        self.score += 100.0 * cur_avg
+        self.score += cur_avg
         self.n_samples += 1

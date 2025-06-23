@@ -97,5 +97,5 @@ class ComputeSingleImagingQuality(ComputeSingleMetric):
             acc_score_video += float(score)
         acc_avg = acc_score_video / len(images)
 
-        self.score += acc_avg
+        self.score += 0.01 * acc_avg
         self.n_samples += 1

@@ -73,10 +73,16 @@ def compute_temporal_flickering(json_list, device, submodules_list, **kwargs):
     return all_results, video_results
 
 
+from .utils import ComputeSingleMetric
 
+class ComputeSingleTemporalFlickering(ComputeSingleMetric):
+    def __init__(self, device, submodules_list):
+        super().__init__(device, submodules_list)
+    
+    def update_single(self, images_tensor):
+        frames = [frame.permute(1, 2, 0).numpy() for frame in images_tensor]
+        score_seq = mae_seq(frames)
+        score_per_video = (255.0 - np.mean(score_seq).item()) / 255.0
 
-
-
-
-
-
+        self.score += score_per_video
+        self.n_samples += 1

@@ -78,3 +78,41 @@ def compute_background_consistency(json_list, device, submodules_list, **kwargs)
         all_results = sim / cnt
     return all_results, video_results
 
+
+from .utils import ComputeSingleMetric
+
+class ComputeSingleBackgroundConsistency(ComputeSingleMetric):
+    def __init__(self, device, submodules_list):
+        super().__init__(device, submodules_list)
+        self.image_transform = clip_transform(224)
+        vit_path, read_frame = submodules_list[0], submodules_list[1]
+        self.clip_model, self.preprocess = clip.load(vit_path, device=device)
+    
+    def update_single(self, images_tensor):
+        image_transform = self.image_transform
+        clip_model = self.clip_model
+        preprocess = self.preprocess
+        device = self.device
+
+        video_sim = 0.0
+        cnt_per_video = 0
+        images_tensor = image_transform(images_tensor)
+        images = images_tensor.to(device)
+        image_features = clip_model.encode_image(images)
+        image_features = F.normalize(image_features, dim=-1, p=2)
+
+        for i in range(len(image_features)):
+            image_feature = image_features[i].unsqueeze(0)
+            if i == 0:
+                first_image_feature = image_feature
+            else:
+                sim_pre = max(0.0, F.cosine_similarity(former_image_feature, image_feature).item())
+                sim_fir = max(0.0, F.cosine_similarity(first_image_feature, image_feature).item())
+                cur_sim = (sim_pre + sim_fir) / 2
+                video_sim += cur_sim
+                cnt_per_video += 1
+            former_image_feature = image_feature
+        sim_per_image = video_sim / (len(image_features) - 1)
+
+        self.score += sim_per_image
+        self.n_samples += 1
