@@ -124,7 +124,6 @@ class MotionSmoothness:
             inputs = [img2tensor(frame).to(self.device) for frame in frame_list]
         else:
             inputs = [(item[i] / 255.0).unsqueeze(0).to(self.device) for i in range(item.shape[0])]
-            inputs = item
 
         assert len(inputs) > 1, f"The number of input should be more than one (current {len(inputs)})"
         inputs = check_dim_and_resize(inputs)
