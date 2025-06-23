@@ -401,8 +401,8 @@ def load_json(path):
     with open(path, 'r', encoding='utf-8') as f:
         return json.load(f)
 
-def list_mean(x: list) -> Any:
-    return list_sum(x) / len(x)
+def list_sum(x: list) -> Any:
+    return x[0] if len(x) == 1 else x[0] + list_sum(x[1:])
 
 def sync_tensor(tensor: torch.Tensor | float) -> torch.Tensor | list[torch.Tensor]:
     if not torch.distributed.is_initialized():
@@ -411,4 +411,4 @@ def sync_tensor(tensor: torch.Tensor | float) -> torch.Tensor | list[torch.Tenso
         tensor = torch.Tensor(1).fill_(tensor).cuda()
     tensor_list = [torch.empty_like(tensor) for _ in range(get_dist_size())]
     torch.distributed.all_gather(tensor_list, tensor.contiguous(), async_op=False)
-    return list_mean(tensor_list)
+    return list_sum(tensor_list)
