@@ -109,7 +109,6 @@ class MotionSmoothness:
 
 
     def motion_score(self, item):
-        print(item)
         iters = int(self.niters)
 
         if isinstance(item, str):
@@ -161,7 +160,6 @@ class MotionSmoothness:
 
 
     def vfi_score(self, ori_frames, interpolate_frames):
-        print(len(ori_frames), len(interpolate_frames))
         ori = self.fp.extract_frame(ori_frames, start_from=1)
         interpolate = self.fp.extract_frame(interpolate_frames, start_from=1)
         scores = []
