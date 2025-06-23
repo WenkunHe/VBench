@@ -198,7 +198,7 @@ def compute_motion_smoothness(json_list, device, submodules_list, **kwargs):
     return all_results, video_results
 
 
-import .utils import sync_tensor
+from .utils import sync_tensor
 
 class ComputeSingleMotionSmoothness:
     def __init__(self, device, submodules_list):
