@@ -70,7 +70,6 @@ class DynamicDegree:
                     frames = self.get_frames_from_img_folder(item)
                 else:
                     raise NotImplementedError
-                print(len(frames), frames[0].shape)
             else:
                 frames = item
 
@@ -185,7 +184,7 @@ class ComputeSingleDynamicDegree(ComputeSingleMetric):
     
     def update_single(self, images_tensor):
         dynamic = self.dynamic
-        frames = [frame for frame in images_tensor]
+        frames = [frame.unsqueeze(0) for frame in images_tensor[::2]]
         print(frames[0].shape)
         score_per_video = dynamic.infer(frames)
         self.score += score_per_video
