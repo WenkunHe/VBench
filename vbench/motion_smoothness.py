@@ -123,8 +123,7 @@ class MotionSmoothness:
             # print(f'Loading [images] from [{video_path}], the number of images = [{len(frame_list)}]')
             inputs = [img2tensor(frame).to(self.device) for frame in frame_list]
         else:
-            frame_list = item
-            inputs = [img2tensor(frame).permute(1, 2, 0).to(self.device) for frame in frame_list]
+            inputs = [(item[i] / 255.0).unsqueeze(0).to(self.device) for i in range(item.shape[0])]
             inputs = item
 
         assert len(inputs) > 1, f"The number of input should be more than one (current {len(inputs)})"
