@@ -64,10 +64,10 @@ class DynamicDegree:
     def infer(self, item):
         with torch.no_grad():
             if isinstance(item, str):
-                if video_path.endswith('.mp4'):
-                    frames = self.get_frames(video_path)
-                elif os.path.isdir(video_path):
-                    frames = self.get_frames_from_img_folder(video_path)
+                if item.endswith('.mp4'):
+                    frames = self.get_frames(item)
+                elif os.path.isdir(item):
+                    frames = self.get_frames_from_img_folder(item)
                 else:
                     raise NotImplementedError
                 print(len(frames), frames[0].shape)
