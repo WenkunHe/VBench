@@ -82,14 +82,12 @@ def compute_subject_consistency(json_list, device, submodules_list, **kwargs):
     return all_results, video_results
 
 
-from .utils import sync_tensor
+from .utils import ComputeSingleMetric
 
-class ComputeSingleSubjectConsistency:
+class ComputeSingleSubjectConsistency(ComputeSingleMetric):
     def __init__(self, device, submodules_list):
-        self.model = torch.hub.load(**submodules_list).to(device)
+        super().__init__(device, submodules_lsit)
         self.image_transform = dino_transform(224)
-        self.device = device
-        self.score, self.n_samples = 0.0, 0
     
     def update_single(self, images_numpy):
         model = self.model
@@ -117,10 +115,3 @@ class ComputeSingleSubjectConsistency:
         sim_per_images = video_sim / (len(images) - 1)
         self.score += sim_per_images
         self.n_samples += 1
-    
-    def compute(self):
-        num_samples, pred_score = self.n_samples, self.score
-        if torch.distributed.is_initialized():
-            num_samples = sync_tensor(torch.tensor(num_samples).cuda()).cpu().numpy().item()
-            pred_score = sync_tensor(torch.tensor(pred_score).cuda()).cpu().numpy().item()
-        return pred_score / num_samples

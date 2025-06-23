@@ -198,9 +198,9 @@ def compute_motion_smoothness(json_list, device, submodules_list, **kwargs):
     return all_results, video_results
 
 
-from .utils import sync_tensor
+from .utils import ComputeSingleMetric
 
-class ComputeSingleMotionSmoothness:
+class ComputeSingleMotionSmoothness(ComputeSingleMetric):
     def __init__(self, device, submodules_list):
         config = submodules_list["config"]
         ckpt = submodules_list["ckpt"]
@@ -220,10 +220,3 @@ class ComputeSingleMotionSmoothness:
         score_per_video = motion.motion_score(images)
         self.score += score_per_video
         self.n_samples += 1
-    
-    def compute(self):
-        num_samples, pred_score = self.n_samples, self.score
-        if torch.distributed.is_initialized():
-            num_samples = sync_tensor(torch.tensor(num_samples).cuda()).cpu().numpy().item()
-            pred_score = sync_tensor(torch.tensor(pred_score).cuda()).cpu().numpy().item()
-        return pred_score / num_samples

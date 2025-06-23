@@ -401,6 +401,7 @@ def load_json(path):
     with open(path, 'r', encoding='utf-8') as f:
         return json.load(f)
 
+
 def list_sum(x: list) -> Any:
     return x[0] if len(x) == 1 else x[0] + list_sum(x[1:])
 
@@ -415,3 +416,20 @@ def sync_tensor(tensor: torch.Tensor | float) -> torch.Tensor | list[torch.Tenso
     tensor_list = [torch.empty_like(tensor) for _ in range(get_dist_size())]
     torch.distributed.all_gather(tensor_list, tensor.contiguous(), async_op=False)
     return list_sum(tensor_list)
+
+
+class ComputeSingleMetric:
+    def __init__(self, device, submodules_list):
+        self.model = torch.hub.load(**submodules_list).to(device)
+        self.device = device
+        self.score, self.n_samples = 0.0, 0
+    
+    def update_single(self, images_numpy, **kwargs):
+        raise NotImplementedError
+    
+    def compute(self):
+        num_samples, pred_score = self.n_samples, self.score
+        if torch.distributed.is_initialized():
+            num_samples = sync_tensor(torch.tensor(num_samples).cuda()).cpu().numpy().item()
+            pred_score = sync_tensor(torch.tensor(pred_score).cuda()).cpu().numpy().item()
+        return pred_score / num_samples
