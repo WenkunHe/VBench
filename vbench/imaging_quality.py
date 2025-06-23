@@ -71,3 +71,31 @@ def compute_imaging_quality(json_list, device, submodules_list, **kwargs):
         all_results = sum([d['video_results'] for d in video_results]) / len(video_results)
         all_results = all_results / 100.
     return all_results, video_results
+
+
+from .utils import ComputeSingleMetric
+
+class ComputeSingleImagingQuality(ComputeSingleMetric):
+    def __init__(self, device, submodules_list):
+        super().__init__(device, submodules_list)
+        model_path = submodules_list['model_path']
+        self.model = MUSIQ(pretrained_model_path=model_path)
+        self.model.to(device)
+        self.model.training = False
+    
+    def update_single(self, images_tensor):
+        preprocess_mode = 'longer'
+        model = self.model
+        images = images_tensor
+        images = transform(images, preprocess_mode)
+        device = self.device
+
+        acc_score_video = 0.0
+        for i in range(len(images)):
+            frame = images[i].unsqueeze(0).to(device)
+            score = model(frame)
+            acc_score_video += float(score)
+        acc_avg = acc_score_video / len(images)
+
+        self.score += acc_avg
+        self.n_samples += 1

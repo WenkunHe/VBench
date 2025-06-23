@@ -99,7 +99,7 @@ def compute_aesthetic_quality(json_list, device, submodules_list, **kwargs):
 
 from .utils import ComputeSingleMetric
 
-class ComputeAestheticQuality(ComputeSingleMetric):
+class ComputeSingleAestheticQuality(ComputeSingleMetric):
     def __init__(self, device, submodules_list):
         super().__init__(device, submodules_list)
         vit_path = submodules_list[0]
@@ -111,31 +111,31 @@ class ComputeAestheticQuality(ComputeSingleMetric):
             barrier()
             self.aesthetic_model = get_aesthetic_model(aes_path).to(device)
         self.clip_model, self.preprocess = clip.load(vit_path, device=device)
-        all_results, video_results = laion_aesthetic(aesthetic_model, clip_model, video_list, device)
+        self.image_transform = clip_transform(224)
     
     def update_single(self, images_tensor):
-        model = self.model
+        images = images_tensor
         image_transform = self.image_transform
         device = self.device
+        clip_model = self.clip_model
+        aesthetic_model = self.aesthetic_model
+        aesthetic_scores_list = []
 
-        images = image_transform(images_tensor)
-        video_sim = 0.0
+        for i in range(0, len(images), batch_size):
+            image_batch = images[i:i + batch_size]
+            image_batch = image_transform(image_batch)
+            image_batch = image_batch.to(device)
 
-        for i in range(len(images)):
             with torch.no_grad():
-                image = images[i].unsqueeze(0)
-                image = image.to(device)
-                image_features = model(image)
-                image_features = F.normalize(image_features, dim=-1, p=2)
-                if i == 0:
-                    first_image_features = image_features
-                else:
-                    sim_pre = max(0.0, F.cosine_similarity(former_image_features, image_features).item())
-                    sim_fir = max(0.0, F.cosine_similarity(first_image_features, image_features).item())
-                    cur_sim = (sim_pre + sim_fir) / 2
-                    video_sim += cur_sim
-            former_image_features = image_features
-    
-        sim_per_images = video_sim / (len(images) - 1)
-        self.score += sim_per_images
+                image_feats = clip_model.encode_image(image_batch).to(torch.float32)
+                image_feats = F.normalize(image_feats, dim=-1, p=2)
+                aesthetic_scores = aesthetic_model(image_feats).squeeze(dim=-1)
+
+            aesthetic_scores_list.append(aesthetic_scores)
+
+        aesthetic_scores = torch.cat(aesthetic_scores_list, dim=0)
+        normalized_aesthetic_scores = aesthetic_scores / 10
+        cur_avg = torch.mean(normalized_aesthetic_scores, dim=0, keepdim=True)
+
+        self.score += 100.0 * cur_avg
         self.n_samples += 1
