@@ -109,8 +109,9 @@ class MotionSmoothness:
 
 
     def motion_score(self, item):
+        iters = int(self.niters)
+
         if isinstance(item, str):
-            iters = int(self.niters)
             # get inputs
             if item.endswith('.mp4'):
                 frames = self.fp.get_frames(item)
