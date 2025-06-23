@@ -82,6 +82,8 @@ def compute_subject_consistency(json_list, device, submodules_list, **kwargs):
     return all_results, video_results
 
 
+import .utils import sync_tensor
+
 class ComputeSingleSubjectConsistency:
     def __init__(self, device, submodules_list):
         self.model = torch.hub.load(**submodules_list).to(device)
