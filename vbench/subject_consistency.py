@@ -86,7 +86,8 @@ from .utils import ComputeSingleMetric
 
 class ComputeSingleSubjectConsistency(ComputeSingleMetric):
     def __init__(self, device, submodules_list):
-        super().__init__(device, submodules_lsit)
+        super().__init__(device, submodules_list)
+        self.model = torch.hub.load(**submodules_list).to(device)
         self.image_transform = dino_transform(224)
     
     def update_single(self, images_numpy):

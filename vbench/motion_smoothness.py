@@ -202,11 +202,10 @@ from .utils import ComputeSingleMetric
 
 class ComputeSingleMotionSmoothness(ComputeSingleMetric):
     def __init__(self, device, submodules_list):
+        super().__init__(device, submodules_list)
         config = submodules_list["config"]
         ckpt = submodules_list["ckpt"]
         self.motion = MotionSmoothness(config, ckpt, device)
-        self.device = device
-        self.score, self.n_samples = 0.0, 0
     
     def update_single(self, images_numpy):
         motion = self.motion

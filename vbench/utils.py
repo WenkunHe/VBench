@@ -420,7 +420,6 @@ def sync_tensor(tensor: torch.Tensor | float) -> torch.Tensor | list[torch.Tenso
 
 class ComputeSingleMetric:
     def __init__(self, device, submodules_list):
-        self.model = torch.hub.load(**submodules_list).to(device)
         self.device = device
         self.score, self.n_samples = 0.0, 0
     
