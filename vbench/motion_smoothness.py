@@ -123,7 +123,7 @@ class MotionSmoothness:
             # print(f'Loading [images] from [{video_path}], the number of images = [{len(frame_list)}]')
             inputs = [img2tensor(frame).to(self.device) for frame in frame_list]
         else:
-            inputs = [(frame / 255.0).unsqueeze(0).to(self.device) for frame in item]
+            inputs = [(torch.tensor(frame) / 255.0).unsqueeze(0).to(self.device) for frame in item]
 
         assert len(inputs) > 1, f"The number of input should be more than one (current {len(inputs)})"
         inputs = check_dim_and_resize(inputs)
@@ -212,7 +212,7 @@ class ComputeSingleMotionSmoothness:
         def img2tensor(img):
             return torch.tensor(img).permute(2, 0, 1).unsqueeze(0) / 255.0
 
-        images = [img2tensor(frame).to(device) for frame in images_numpy]
+        images = [frame for frame in images_numpy]
 
         score_per_video = motion.motion_score(images)
         self.score += score_per_video
