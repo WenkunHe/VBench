@@ -80,3 +80,45 @@ def compute_subject_consistency(json_list, device, submodules_list, **kwargs):
         video_results = gather_list_of_dict(video_results)
         all_results = sum([d['video_results'] for d in video_results]) / len(video_results)
     return all_results, video_results
+
+
+class ComputeSingleSubjectConsistency:
+    def __init__(self, device, submodules_list):
+        self.model = torch.hub.load(**submodules_list).to(device)
+        self.image_transform = dino_transform(224)
+        self.device = device
+        self.score, self.n_samples = 0.0, 0
+    
+    def update_single(self, images_numpy):
+        model = self.model
+        image_transform = self.image_transform
+        device = self.device
+
+        images = image_transform(images_numpy)
+        video_sim = 0.0
+
+        for i in range(len(images)):
+            with torch.no_grad():
+                image = images[i].unsqueeze(0)
+                image = image.to(device)
+                image_features = model(image)
+                image_features = F.normalize(image_features, dim=-1, p=2)
+                if i == 0:
+                    first_image_features = image_features
+                else:
+                    sim_pre = max(0.0, F.cosine_similarity(former_image_features, image_features).item())
+                    sim_fir = max(0.0, F.cosine_similarity(first_image_features, image_features).item())
+                    cur_sim = (sim_pre + sim_fir) / 2
+                    video_sim += cur_sim
+            former_image_features = image_features
+    
+        sim_per_images = video_sim / (len(images) - 1)
+        self.score += sim_per_images
+        self.n_samples += 1
+    
+    def compute(self):
+        num_samples, pred_score = self.n_samples, self.score
+        if torch.distributed.is_initialized():
+            num_samples = sync_tensor(torch.tensor(num_samples).cuda(), reduce="sum").cpu().numpy().item()
+            pred_score = sync_tensor(torch.tensor(pred_score).cuda(), reduce="sum").cpu().numpy().item()
+        return pred_score / num_samples

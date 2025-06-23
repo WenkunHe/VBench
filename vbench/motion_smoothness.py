@@ -108,18 +108,22 @@ class MotionSmoothness:
         self.fp = FrameProcess()
 
 
-    def motion_score(self, video_path):
-        iters = int(self.niters)
-        # get inputs
-        if video_path.endswith('.mp4'):
-            frames = self.fp.get_frames(video_path)
-        elif os.path.isdir(video_path):
-            frames = self.fp.get_frames_from_img_folder(video_path)
+    def motion_score(self, item):
+        if isinstance(item, str):
+            iters = int(self.niters)
+            # get inputs
+            if item.endswith('.mp4'):
+                frames = self.fp.get_frames(item)
+            elif os.path.isdir(item):
+                frames = self.fp.get_frames_from_img_folder(item)
+            else:
+                raise NotImplementedError
+            frame_list = self.fp.extract_frame(frames, start_from=0)
+            # print(f'Loading [images] from [{video_path}], the number of images = [{len(frame_list)}]')
+            inputs = [img2tensor(frame).to(self.device) for frame in frame_list]
         else:
-            raise NotImplementedError
-        frame_list = self.fp.extract_frame(frames, start_from=0)
-        # print(f'Loading [images] from [{video_path}], the number of images = [{len(frame_list)}]')
-        inputs = [img2tensor(frame).to(self.device) for frame in frame_list]
+            inputs = item
+
         assert len(inputs) > 1, f"The number of input should be more than one (current {len(inputs)})"
         inputs = check_dim_and_resize(inputs)
         h, w = inputs[0].shape[-2:]
@@ -190,3 +194,32 @@ def compute_motion_smoothness(json_list, device, submodules_list, **kwargs):
         video_results = gather_list_of_dict(video_results)
         all_results = sum([d['video_results'] for d in video_results]) / len(video_results)
     return all_results, video_results
+
+
+class ComputeSingleMotionSmoothness:
+    def __init__(self, device, submodules_list):
+        config = submodules_list["config"]
+        ckpt = submodules_list["ckpt"]
+        self.motion = MotionSmoothness(config, ckpt, device)
+        self.device = device
+        self.score, self.n_samples = 0.0, 0
+    
+    def update_single(self, images_numpy):
+        motion = self.motion
+        device = self.device
+
+        def img2tensor(img):
+            return torch.tensor(img).permute(2, 0, 1).unsqueeze(0) / 255.0
+
+        images = [img2tensor(frame).to(device) for frame in images_numpy]
+
+        score_per_video = motion.motion_score(imgs)
+        self.score += score_per_video
+        self.n_samples += 1
+    
+    def compute(self):
+        num_samples, pred_score = self.n_samples, self.score
+        if torch.distributed.is_initialized():
+            num_samples = sync_tensor(torch.tensor(num_samples).cuda(), reduce="sum").cpu().numpy().item()
+            pred_score = sync_tensor(torch.tensor(pred_score).cuda(), reduce="sum").cpu().numpy().item()
+        return pred_score / num_samples
