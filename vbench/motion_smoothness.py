@@ -213,7 +213,7 @@ class ComputeSingleMotionSmoothness:
 
         images = [img2tensor(frame).to(device) for frame in images_numpy]
 
-        score_per_video = motion.motion_score(imgs)
+        score_per_video = motion.motion_score(images)
         self.score += score_per_video
         self.n_samples += 1
     
