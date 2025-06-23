@@ -123,6 +123,7 @@ class MotionSmoothness:
             # print(f'Loading [images] from [{video_path}], the number of images = [{len(frame_list)}]')
             inputs = [img2tensor(frame).to(self.device) for frame in frame_list]
         else:
+            inputs = [img2tensor(frame).permute(1, 2, 0).to(self.device) for frame in frame_list]
             inputs = item
 
         for ittt in inputs:
