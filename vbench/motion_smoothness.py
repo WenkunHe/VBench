@@ -124,6 +124,7 @@ class MotionSmoothness:
             inputs = [img2tensor(frame).to(self.device) for frame in frame_list]
         else:
             inputs = [(torch.tensor(frame) / 255.0).unsqueeze(0).to(self.device) for frame in item]
+            frames = [frame.permute(1, 2, 0).numpy() for frame in item]
 
         assert len(inputs) > 1, f"The number of input should be more than one (current {len(inputs)})"
         inputs = check_dim_and_resize(inputs)
@@ -153,9 +154,6 @@ class MotionSmoothness:
         # -----------------------  cal_vfi_score ----------------------- 
         outputs = padder.unpad(*outputs)
         outputs = [tensor2img(out) for out in outputs]
-        for frame in frames:
-            print(frame.shape)
-        print(frames[0])
         vfi_score = self.vfi_score(frames, outputs)
         norm = (255.0 - vfi_score)/255.0
         return norm
