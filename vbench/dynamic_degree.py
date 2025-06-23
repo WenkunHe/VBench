@@ -185,6 +185,7 @@ class ComputeSingleDynamicDegree(ComputeSingleMetric):
     def update_single(self, images_tensor):
         dynamic = self.dynamic
         frames = [frame for frame in images_tensor]
+        print(frames[0].shape)
         score_per_video = dynamic.infer(frames)
         self.score += score_per_video
         self.n_samples += 1
