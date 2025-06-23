@@ -109,6 +109,7 @@ class MotionSmoothness:
 
 
     def motion_score(self, item):
+        print(item)
         iters = int(self.niters)
 
         if isinstance(item, str):
