@@ -123,10 +123,9 @@ class MotionSmoothness:
             frame_list = self.fp.extract_frame(frames, start_from=0)
             # print(f'Loading [images] from [{video_path}], the number of images = [{len(frame_list)}]')
             inputs = [img2tensor(frame).to(self.device) for frame in frame_list]
-            print(len(frame_list), len(inputs))
         else:
             inputs = [(torch.tensor(frame) / 255.0).unsqueeze(0).to(self.device) for frame in item]
-            frames = [frame.permute(1, 2, 0).numpy() for frame in item]
+            frames = [frame.permute(1, 2, 0).numpy() for frame in item[::2]]
 
         assert len(inputs) > 1, f"The number of input should be more than one (current {len(inputs)})"
         inputs = check_dim_and_resize(inputs)
