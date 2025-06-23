@@ -125,6 +125,8 @@ class MotionSmoothness:
         else:
             inputs = item
 
+        for ittt in inputs:
+            print(ittt.shape)
         assert len(inputs) > 1, f"The number of input should be more than one (current {len(inputs)})"
         inputs = check_dim_and_resize(inputs)
         h, w = inputs[0].shape[-2:]
