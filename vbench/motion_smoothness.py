@@ -224,6 +224,6 @@ class ComputeSingleMotionSmoothness:
     def compute(self):
         num_samples, pred_score = self.n_samples, self.score
         if torch.distributed.is_initialized():
-            num_samples = sync_tensor(torch.tensor(num_samples).cuda(), reduce="sum").cpu().numpy().item()
-            pred_score = sync_tensor(torch.tensor(pred_score).cuda(), reduce="sum").cpu().numpy().item()
+            num_samples = sync_tensor(torch.tensor(num_samples).cuda()).cpu().numpy().item()
+            pred_score = sync_tensor(torch.tensor(pred_score).cuda()).cpu().numpy().item()
         return pred_score / num_samples
