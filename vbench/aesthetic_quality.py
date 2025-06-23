@@ -95,3 +95,47 @@ def compute_aesthetic_quality(json_list, device, submodules_list, **kwargs):
         video_results = gather_list_of_dict(video_results)
         all_results = sum([d['video_results'] for d in video_results]) / len(video_results)
     return all_results, video_results
+
+
+from .utils import ComputeSingleMetric
+
+class ComputeAestheticQuality(ComputeSingleMetric):
+    def __init__(self, device, submodules_list):
+        super().__init__(device, submodules_list)
+        vit_path = submodules_list[0]
+        aes_path = submodules_list[1]
+        if get_rank() == 0:
+            self.aesthetic_model = get_aesthetic_model(aes_path).to(device)
+            barrier()
+        else:
+            barrier()
+            self.aesthetic_model = get_aesthetic_model(aes_path).to(device)
+        self.clip_model, self.preprocess = clip.load(vit_path, device=device)
+        all_results, video_results = laion_aesthetic(aesthetic_model, clip_model, video_list, device)
+    
+    def update_single(self, images_tensor):
+        model = self.model
+        image_transform = self.image_transform
+        device = self.device
+
+        images = image_transform(images_tensor)
+        video_sim = 0.0
+
+        for i in range(len(images)):
+            with torch.no_grad():
+                image = images[i].unsqueeze(0)
+                image = image.to(device)
+                image_features = model(image)
+                image_features = F.normalize(image_features, dim=-1, p=2)
+                if i == 0:
+                    first_image_features = image_features
+                else:
+                    sim_pre = max(0.0, F.cosine_similarity(former_image_features, image_features).item())
+                    sim_fir = max(0.0, F.cosine_similarity(first_image_features, image_features).item())
+                    cur_sim = (sim_pre + sim_fir) / 2
+                    video_sim += cur_sim
+            former_image_features = image_features
+    
+        sim_per_images = video_sim / (len(images) - 1)
+        self.score += sim_per_images
+        self.n_samples += 1

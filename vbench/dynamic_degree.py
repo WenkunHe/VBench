@@ -70,6 +70,7 @@ class DynamicDegree:
                     frames = self.get_frames_from_img_folder(video_path)
                 else:
                     raise NotImplementedError
+                print(len(frames), frames[0].shape)
             else:
                 frames = item
 
