@@ -160,6 +160,7 @@ class MotionSmoothness:
 
 
     def vfi_score(self, ori_frames, interpolate_frames):
+        print(len(ori_frames), len(interpolate_frames))
         ori = self.fp.extract_frame(ori_frames, start_from=1)
         interpolate = self.fp.extract_frame(interpolate_frames, start_from=1)
         scores = []
