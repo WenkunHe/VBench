@@ -120,3 +120,89 @@ def compute_human_action(json_list, device, submodules_list, **kwargs):
         all_results = sum([d['cor_num_per_video'] for d in video_results]) / len(video_results)
 
     return all_results, video_results
+
+
+from .utils import ComputeSingleMetric
+
+class ComputeSingleHumanAction(ComputeSingleMetric):
+    def __init__(self, device, submodules_list):
+        super().__init__(device, submodules_list)
+        umt_path = submodules_list[0]
+        state_dict = torch.load(umt_path, map_location='cpu')
+        self.model = create_model(
+            "vit_large_patch16_224",
+            pretrained=False,
+            num_classes=400,
+            all_frames=16,
+            tubelet_size=1,
+            use_learnable_pos_emb=False,
+            fc_drop_rate=0.,
+            drop_rate=0.,
+            drop_path_rate=0.2,
+            attn_drop_rate=0.,
+            drop_block_rate=None,
+            use_checkpoint=False,
+            checkpoint_num=16,
+            use_mean_pooling=True,
+            init_scale=0.001,
+        )
+        self.model = self.model.to(device)
+        self.model.load_state_dict(state_dict, strict=False)
+        self.model.eval()
+
+        self.data_transform = Compose([
+            Resize(256, interpolation='bilinear'),
+            CenterCrop(size=(224, 224)),
+            ClipToTensor(),
+            Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
+        ])
+    
+    def update_single(self, images_tensor, prompts):
+        model = self.model
+        data_transform = self.data_transform
+        device = self.device
+
+        cor_num_per_video = 0
+        cat_dict = build_dict()
+        video_label = prompts[0].lower().split('-')[0].split("person is ")[-1].split('_')[0]
+        
+        indices = self.get_frame_indices(num_frames=16, vlen=images_tensor.shape[0])
+        images = images_tensor[indices]
+        images = data_transform(images.permute(0, 2, 3, 1).numpy())
+        images = images.unsqueeze(0).to(device)
+
+        with torch.no_grad():
+            logits = torch.sigmoid(model(images))
+            results, indices = torch.topk(logits, 5, dim=1)
+
+        indices = indices.squeeze().tolist()
+        results = results.squeeze().tolist()
+        results = [round(f, 4) for f in results]
+
+        cat_ls = []
+        for i in range(5):
+            if results[i] >= 0.85:
+                cat_ls.append(cat_dict[str(indices[i])])
+
+        for cat in cat_ls:
+            if cat == video_label:
+                cor_num_per_video += 1
+
+        self.score += cor_num_per_video
+        self.n_samples += 1
+
+    def get_frame_indices(self, num_frames, vlen):
+        acc_samples = min(num_frames, vlen)
+
+        intervals = np.linspace(start=0, stop=vlen, num=acc_samples + 1).astype(int)
+        ranges = []
+        for idx, interv in enumerate(intervals[:-1]):
+            ranges.append((interv, intervals[idx + 1] - 1))
+        frame_indices = [(x[0] + x[1]) // 2 for x in ranges]
+
+        if len(frame_indices) < num_frames:  # padded with last frame
+            padded_frame_indices = [frame_indices[-1]] * num_frames
+            padded_frame_indices[:len(frame_indices)] = frame_indices
+            frame_indices = padded_frame_indices
+
+        return frame_indices

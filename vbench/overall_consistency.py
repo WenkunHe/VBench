@@ -19,14 +19,13 @@ from .distributed import (
 )
 
 
-def get_text_features(model, input_text, tokenizer, text_feature_dict={}):
-    if input_text in text_feature_dict:
-        return text_feature_dict[input_text]
+def get_text_features(model, input_text, tokenizer):
+    if isinstance(input_text, list):
+        input_text = input_text[0]
     text_template= f"{input_text}"
     with torch.no_grad():
         text_features = model.encode_text(text_template).float()
-        text_features /= text_features.norm(dim=-1, keepdim=True)      
-        text_feature_dict[input_text] = text_features
+        text_features /= text_features.norm(dim=-1, keepdim=True)
     return text_features
 
 def get_vid_features(model, input_frames):
@@ -73,3 +72,50 @@ def compute_overall_consistency(json_list, device, submodules_list, **kwargs):
         video_results = gather_list_of_dict(video_results)
         all_results = sum([d['video_results'] for d in video_results]) / len(video_results)
     return all_results, video_results
+
+
+from .utils import ComputeSingleMetric
+
+class ComputeSingleOverallConsistency(ComputeSingleMetric):
+    def __init__(self, device, submodules_list):
+        super().__init__(device, submodules_list)
+        self.tokenizer = SimpleTokenizer(os.path.join(CACHE_DIR, "ViCLIP/bpe_simple_vocab_16e6.txt.gz"))
+        self.viclip = ViCLIP(tokenizer=self.tokenizer, **submodules_list).to(device)
+        self.image_transform = clip_transform(224)
+    
+    def update_single(self, images_tensor, prompts):
+        clip_model = self.viclip
+        tokenizer = self.tokenizer
+        image_transform = self.image_transform
+        device = self.device
+
+        query = prompts
+
+        with torch.no_grad():
+            indices = self.get_frame_indices(num_frames=8, vlen=images_tensor.shape[0])
+            images = images_tensor[indices]
+            images = image_transform(images)
+            images = images.to(device)
+            clip_feat = get_vid_features(clip_model, images.unsqueeze(0))
+            text_feat = get_text_features(clip_model, query, tokenizer)
+            logit_per_text = clip_feat @ text_feat.T
+            score_per_video = float(logit_per_text[0][0].cpu())
+
+        self.score += score_per_video
+        self.n_samples += 1
+
+    def get_frame_indices(self, num_frames, vlen):
+        acc_samples = min(num_frames, vlen)
+
+        intervals = np.linspace(start=0, stop=vlen, num=acc_samples + 1).astype(int)
+        ranges = []
+        for idx, interv in enumerate(intervals[:-1]):
+            ranges.append((interv, intervals[idx + 1] - 1))
+        frame_indices = [(x[0] + x[1]) // 2 for x in ranges]
+
+        if len(frame_indices) < num_frames:  # padded with last frame
+            padded_frame_indices = [frame_indices[-1]] * num_frames
+            padded_frame_indices[:len(frame_indices)] = frame_indices
+            frame_indices = padded_frame_indices
+
+        return frame_indices

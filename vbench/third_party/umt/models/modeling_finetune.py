@@ -348,6 +348,7 @@ class VisionTransformer(nn.Module):
 def vit_large_patch16_224(pretrained=False, **kwargs):
     kwargs.pop('pretrained_cfg', None) # added by Ziqi to accommodate timm=0.9.12
     kwargs.pop('pretrained_cfg_overlay', None) # added by Ziqi to accommodate timm=0.9.12
+    kwargs.pop('cache_dir', None) # added by Wenkun to accommodate timm=0.9.12
     model = VisionTransformer(
         patch_size=16, embed_dim=1024, depth=24, num_heads=16, mlp_ratio=4, qkv_bias=True,
         norm_layer=partial(nn.LayerNorm, eps=1e-6), **kwargs)
