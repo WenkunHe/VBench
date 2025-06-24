@@ -77,3 +77,57 @@ def compute_scene(json_list, device, submodules_dict, **kwargs):
         frame_count = sum([d['frame_count'] for d in video_results])
         all_results = success_frame_count / frame_count
     return all_results, video_results
+
+
+from .utils import ComputeSingleMetric
+
+class ComputeSingleScene(ComputeSingleMetric):
+    def __init__(self, device, submodules_list):
+        super().__init__(device, submodules_list)
+        self.model = tag2text_caption(**submodules_list)
+        self.model.eval()
+        self.model = self.model.to(device)
+        self.transform = tag2text_transform(384)
+    
+    def update_single(self, images_tensor, info):
+        model = self.model
+        transform = self.transform
+        device = self.device
+
+        assert 'scene' in info, "Auxiliary info is not in json, please check your json."
+        scene_info = info['scene']["scene"]["scene"][0]
+
+        indices = self.get_frame_indices(num_frames=16, vlen=images_tensor.shape[0])
+        video_tensor = images_tensor[indices]
+
+        from torchvision import transforms
+        video_array = transforms.Resize(size=(384, 384),)(video_tensor)
+        video_array = video_array.permute(0, 2, 3, 1).numpy()
+
+        video_tensor_list = []
+        for v in video_array:
+            video_tensor_list.append(transform(v).to(device).unsqueeze(0))
+        video_tensor = torch.cat(video_tensor_list)
+
+        cur_video_pred = get_caption(model, video_tensor)
+        cur_success_frame_count = check_generate(scene_info, cur_video_pred)
+        cur_success_frame_rate = cur_success_frame_count / len(cur_video_pred)
+
+        self.score += cur_success_frame_count
+        self.n_samples += len(cur_video_pred)
+    
+    def get_frame_indices(self, num_frames, vlen):
+        acc_samples = min(num_frames, vlen)
+
+        intervals = np.linspace(start=0, stop=vlen, num=acc_samples + 1).astype(int)
+        ranges = []
+        for idx, interv in enumerate(intervals[:-1]):
+            ranges.append((interv, intervals[idx + 1] - 1))
+        frame_indices = [(x[0] + x[1]) // 2 for x in ranges]
+
+        if len(frame_indices) < num_frames:  # padded with last frame
+            padded_frame_indices = [frame_indices[-1]] * num_frames
+            padded_frame_indices[:len(frame_indices)] = frame_indices
+            frame_indices = padded_frame_indices
+
+        return frame_indices

@@ -103,3 +103,57 @@ def compute_color(json_list, device, submodules_dict, **kwargs):
         frame_count = len(video_results)
         all_results = success_frame_count / frame_count
     return all_results, video_results
+
+
+from .utils import ComputeSingleMetric
+
+class ComputeSingleColor(ComputeSingleMetric):
+    def __init__(self, device, submodules_list):
+        super().__init__(device, submodules_list)
+        self.model = DenseCaptioning(device)
+        self.model.initialize_model(**submodules_list)
+    
+    def update_single(self, images_tensor, prompts, info):
+        model = self.model
+
+        assert 'color' in info, "Auxiliary info is not in json, please check your json."
+        color_info = info['color']["color"][0]
+        object_info = prompts[0].replace('a ','').replace('an ','').replace(color_info,'').strip()
+        indices = self.get_frame_indices(num_frames=16, vlen=images_tensor.shape[0])
+        video_tensor = images_tensor[indices]
+        video_arrays = video_tensor.permute(0, 2, 3, 1).numpy()
+
+        _, h, w, _ = video_arrays.shape
+        if min(h, w) > 768:
+            scale = 720.0 / min(h, w)
+            new_h = int(scale * h)
+            new_w = int(scale * w)
+            resized_video = np.zeros((video_arrays.shape[0], new_h, new_w, 3), dtype=video_arrays.dtype)
+            for i in range(video_arrays.shape[0]):
+                resized_video[i] = cv2.resize(video_arrays[i], (new_w, new_h), interpolation=cv2.INTER_LINEAR)
+            video_arrays = resized_video
+
+        cur_video_pred = get_dect_from_grit(model, video_arrays)
+        cur_object, cur_object_color = check_generate(color_info, object_info, cur_video_pred)
+
+        if cur_object > 0:
+            cur_success_frame_rate = cur_object_color / cur_object
+            self.score += cur_success_frame_rate
+
+        self.n_samples += 1
+    
+    def get_frame_indices(self, num_frames, vlen):
+        acc_samples = min(num_frames, vlen)
+
+        intervals = np.linspace(start=0, stop=vlen, num=acc_samples + 1).astype(int)
+        ranges = []
+        for idx, interv in enumerate(intervals[:-1]):
+            ranges.append((interv, intervals[idx + 1] - 1))
+        frame_indices = [(x[0] + x[1]) // 2 for x in ranges]
+
+        if len(frame_indices) < num_frames:  # padded with last frame
+            padded_frame_indices = [frame_indices[-1]] * num_frames
+            padded_frame_indices[:len(frame_indices)] = frame_indices
+            frame_indices = padded_frame_indices
+
+        return frame_indices

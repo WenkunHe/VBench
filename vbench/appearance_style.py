@@ -82,3 +82,37 @@ def compute_appearance_style(json_list, device, submodules_list, **kwargs):
         video_results = gather_list_of_dict(video_results)
         all_results = sum([d['cur_sim'] for d in video_results]) / len(video_results)
     return all_results, video_results
+
+
+from .utils import ComputeSingleMetric
+
+class ComputeSingleAppearanceStyle(ComputeSingleMetric):
+    def __init__(self, device, submodules_list):
+        super().__init__(device, submodules_list)
+        self.clip_model, self.preprocess = clip.load(device=device, **submodules_list)
+        self.image_transform = clip_transform_Image(224)
+    
+    def update_single(self, images_tensor, info):
+        clip_model = self.clip_model
+        image_transform = self.image_transform
+        device = self.device
+
+        assert 'appearance_style' in info, "Auxiliary info is not in json, please check your json."
+        query = info['appearance_style']["appearance_style"][0]
+        text = clip.tokenize([query]).to(device)
+
+        cur_video = []
+
+        with torch.no_grad():
+            video_arrays = images_tensor.permute(0, 2, 3, 1).numpy()
+            images = [Image.fromarray(i) for i in video_arrays]
+            for image in images:
+                image = image_transform(image)
+                image = image.to(device)
+                logits_per_image, logits_per_text = clip_model(image.unsqueeze(0), text)
+                cur_sim = float(logits_per_text[0][0].cpu())
+                cur_sim = cur_sim / 100
+                cur_video.append(cur_sim)
+            
+        self.score += np.mean(cur_video)
+        self.n_samples += 1
