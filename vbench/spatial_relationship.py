@@ -96,7 +96,7 @@ def get_dect_from_grit(model, image_arrays):
     return pred
 
 def check_generate(key_info, predictions):
-    if isinstance(key_info['object_a']):
+    if isinstance(key_info['object_a'], list):
         key_a = key_info['object_a'][0]
         key_b = key_info['object_b'][0]
         relation = key_info['relationship'][0]
