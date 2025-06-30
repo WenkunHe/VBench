@@ -8,7 +8,7 @@ warnings.filterwarnings("ignore")
 from .vit import VisionTransformer, interpolate_pos_embed
 from .swin_transformer import SwinTransformer, interpolate_relative_pos_embed
 from .med import BertConfig, BertModel, BertLMHeadModel
-from transformers import BertTokenizer
+from transformers import BertTokenizer, GenerationMixin
 
 import torch
 from torch import nn
@@ -28,7 +28,13 @@ def read_json(rpath):
         return json.load(f)
 
 delete_tag_index = [127, 3351, 3265, 3338, 3355, 3359]
-        
+
+
+class BertLMHeadGenerationModel(BertLMHeadModel, GenerationMixin):
+    def __init__(self, config):
+        super().__init__(config=config)
+
+
 class Tag2Text_Caption(nn.Module):
     def __init__(self,                 
                  med_config = f'{CUR_DIR}/med_config.json',  
@@ -81,7 +87,7 @@ class Tag2Text_Caption(nn.Module):
         # create the decoder
         decoder_config = BertConfig.from_json_file(med_config)
         decoder_config.encoder_width = 768
-        self.text_decoder = BertLMHeadModel(config=decoder_config)     
+        self.text_decoder = BertLMHeadGenerationModel(config=decoder_config)     
 
         # create encoder
         encoder_config = BertConfig.from_json_file(med_config)

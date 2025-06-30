@@ -23,12 +23,12 @@ logger = logging.getLogger(__name__)
 
 
 def get_caption(model, image_arrays):
-    caption, tag_predict = model.generate(image_arrays, tag_input = None, return_tag_predict = True)
+    caption, _ = model.generate(image_arrays, tag_input = None, return_tag_predict = True)
     return caption
 
 def check_generate(key_info, predictions):
     cur_cnt = 0
-    key = key_info['scene']
+    key = key_info
     for pred in predictions:
         q_flag = [q in pred for q in key.split(' ')]
         if len(q_flag) == sum(q_flag):
