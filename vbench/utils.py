@@ -234,7 +234,7 @@ def load_dimension_info(json_list, dimension, lang):
                 prompt_dict_ls += [{'prompt': prompt, 'video_list': cur_video_list}]
     return video_list, prompt_dict_ls
 
-def init_submodules(dimension_list, local=False, read_frame=False):
+def init_submodules(dimension_list, local=False, read_frame=False, resolution="26-15"):
     submodules_dict = {}
     if local:
         logger.info("\x1b[32m[Local Mode]\x1b[0m Working in local mode, please make sure that the pre-trained model has been fully downloaded.")
@@ -367,6 +367,42 @@ def init_submodules(dimension_list, local=False, read_frame=False):
             if not os.path.exists(submodules_dict[dimension]['pretrain']):
                 wget_command = ['wget', 'https://huggingface.co/OpenGVLab/VBench_Used_Models/resolve/main/ViClip-InternVid-10M-FLT.pth', '-P', os.path.dirname(submodules_dict[dimension]["pretrain"])]
                 subprocess.run(wget_command, check=True)
+        elif dimension == 'i2v_subject':
+            if local:
+                submodules_dict[dimension] = {
+                    'repo_or_dir': f'{CACHE_DIR}/dino_model/facebookresearch_dino_main/',
+                    'path': f'{CACHE_DIR}/dino_model/dino_vitbase16_pretrain.pth', 
+                    'model': 'dino_vitb16',
+                    'source': 'local',
+                    'resolution': resolution
+                    }
+                details = submodules_dict[dimension]
+                # Check if the file exists, if not, download it with wget
+                if not os.path.isdir(details['repo_or_dir']):
+                    print(f"Directory {details['repo_or_dir']} does not exist. Cloning repository...")
+                    subprocess.run(['git', 'clone', 'https://github.com/facebookresearch/dino', details['repo_or_dir']], check=True)
+
+                if not os.path.isfile(details['path']):
+                    print(f"File {details['path']} does not exist. Downloading...")
+                    wget_command = ['wget', '-P', os.path.dirname(details['path']),
+                                    'https://dl.fbaipublicfiles.com/dino/dino_vitbase16_pretrain/dino_vitbase16_pretrain.pth']
+                    subprocess.run(wget_command, check=True)
+            else:
+                submodules_dict[dimension] = {
+                    'repo_or_dir':'facebookresearch/dino:main',
+                    'source':'github',
+                    'model': 'dino_vitb16',
+                    'resolution': resolution
+                    }
+        elif dimension == 'i2v_background':
+            submodules_dict[dimension] = {
+                    'resolution': resolution
+                    }
+        elif dimension == 'camera_motion':
+            submodules_dict[dimension] = {
+                "repo":"facebookresearch/co-tracker",
+                "model":"cotracker2"
+            }
 
         if get_rank() == 0:
             barrier()
@@ -432,3 +468,9 @@ class ComputeSingleMetric:
             num_samples = sync_tensor(torch.tensor(num_samples).cuda()).cpu().numpy().item()
             pred_score = sync_tensor(torch.tensor(pred_score).cuda()).cpu().numpy().item()
         return pred_score / num_samples
+    
+    def get_num_samples(self):
+        num_samples = self.n_samples
+        if torch.distributed.is_initialized():
+            num_samples = sync_tensor(torch.tensor(num_samples).cuda()).cpu().numpy().item()
+        return num_samples
