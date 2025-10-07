@@ -62,7 +62,7 @@ def i2v_background(dream_model, video_pair_list, device):
 
 def compute_i2v_background(json_dir, device, submodules_list, **kwargs):
     
-    dream_model, preprocess = dreamsim(pretrained=True, cache_dir="applications/checkpoints/vbench")
+    dream_model, preprocess = dreamsim(pretrained=True, cache_dir="assets/checkpoints/vbench")
     resolution = submodules_list['resolution']
     logger.info("Initialize DreamSim success")
     
@@ -76,7 +76,7 @@ from .utils import ComputeSingleMetric
 class ComputeSingleI2VBackground(ComputeSingleMetric):
     def __init__(self, device, submodules_list):
         super().__init__(device, submodules_list)
-        cache_dir = "applications/checkpoints/vbench"
+        cache_dir = "assets/checkpoints/vbench"
         os.makedirs(cache_dir, exist_ok=True)
         self.dream_model, _ = dreamsim(pretrained=True, cache_dir=cache_dir)
         self.image_transform = dreamsim_transform_Image(224)
